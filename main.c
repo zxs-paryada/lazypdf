@@ -288,3 +288,51 @@ void drop_save_to_png_output(save_to_png_output *output) {
 	je_free(output->data);
 	je_free(output);
 }
+
+void get_pdf_size(save_to_png_input *input,int DPI,int *Width,int * Height) {
+	fz_context *ctx = fz_clone_context(global_ctx);
+	if (ctx == NULL) {
+		return ;
+	}
+
+	fz_stream *stream = NULL;
+	pdf_document *doc = NULL;
+	pdf_page *page = NULL;
+	fz_device *device = NULL;
+	fz_pixmap *pixmap = NULL;
+	fz_buffer *buffer = NULL;
+
+	fz_var(stream);
+	fz_var(doc);
+	fz_var(page);
+	fz_var(device);
+	fz_var(pixmap);
+	fz_var(buffer);
+
+	fz_try(ctx) {
+		stream = fz_open_memory(ctx, input->payload, input->payload_length);
+		doc = pdf_open_document_with_stream(ctx, stream);
+		page = pdf_load_page(ctx, doc, input->page);
+
+		float scale_factor = 1.5;
+		fz_rect bounds = pdf_bound_page(ctx, page);
+		fz_matrix transform = fz_rotate(0);
+		transform =fz_pre_scale(transform,DPI / 72.0f, DPI / 72.0f);
+		bounds = fz_transform_rect(bounds,transform);
+		*Width = (bounds.x1 - bounds.x0) + 0.5;
+		*Height = (bounds.y1 - bounds.y0) + 0.5;
+	} fz_always(ctx) {
+		fz_drop_buffer(ctx, buffer);
+		fz_try(ctx) {
+			fz_close_device(ctx, device);
+		} fz_catch(ctx) {}
+		fz_drop_device(ctx, device);
+		fz_drop_pixmap(ctx, pixmap);
+		fz_drop_page(ctx, (fz_page*)page);
+		pdf_drop_document(ctx, doc);
+		fz_drop_stream(ctx, stream);
+	} fz_catch(ctx) {
+
+	}
+	fz_drop_context(ctx);
+}

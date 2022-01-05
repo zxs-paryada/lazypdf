@@ -35,4 +35,6 @@ void drop_page_count_output(page_count_output *output);
 save_to_png_output *save_to_png(save_to_png_input *input);
 void drop_save_to_png_output(save_to_png_output *output);
 
+void get_pdf_size(save_to_png_input *input,int DPI,int *Width,int * Height);
+
 #endif

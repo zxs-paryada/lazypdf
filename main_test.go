@@ -30,6 +30,18 @@ func TestSaveToPNGOK(t *testing.T) {
 	}
 }
 
+func TestGetPdfSizeOK(t *testing.T) {
+
+	file, err := os.Open("testdata/sample.pdf")
+	require.NoError(t, err)
+	defer func() { require.NoError(t, file.Close()) }()
+
+	buf := bytes.NewBuffer([]byte{})
+	w, h, err := GetPdfSize(context.Background(), 0, 0, 0, file, buf)
+	fmt.Println("sample.pdf", w, h)
+
+}
+
 func TestSaveToPNGFail(t *testing.T) {
 	file, err := os.Open("testdata/sample-invalid.pdf")
 	require.NoError(t, err)

@@ -86,3 +86,37 @@ func PageCount(ctx context.Context, rawPayload io.Reader) (_ int, err error) {
 	}
 	return int(output.count), nil
 }
+
+// SaveToPNG is used to convert a page from a PDF file to PNG.
+func GetPdfSize(ctx context.Context, page, width uint16, scale float32, rawPayload io.Reader, output io.Writer) (Width int, Height int, err error) {
+	span, _ := ddTracer.StartSpanFromContext(ctx, "lazypdf.SaveToPNG")
+	defer func() { span.Finish(ddTracer.WithError(err)) }()
+
+	if rawPayload == nil {
+		return 0, 0, errors.New("payload can't be nil")
+	}
+	if output == nil {
+		return 0, 0, errors.New("output can't be nil")
+	}
+
+	payload, err := io.ReadAll(rawPayload)
+	if err != nil {
+		return 0, 0, fmt.Errorf("fail to read the payload: %w", err)
+	}
+	payloadPointer := C.CBytes(payload)
+	defer C.free(payloadPointer)
+
+	input := C.save_to_png_input{
+		page:           C.int(page),
+		width:          C.int(width),
+		scale:          C.float(scale),
+		payload:        (*C.uchar)(payloadPointer),
+		payload_length: C.size_t(len(payload)),
+	}
+	cWidth := C.int(0)
+	cHeight := C.int(0)
+	C.get_pdf_size(&input, 300, &cWidth, &cHeight) // nolint: gocritic
+	Width = int(cWidth)
+	Height = int(cHeight)
+	return Width, Height, nil
+}
